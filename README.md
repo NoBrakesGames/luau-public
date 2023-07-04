@@ -46,6 +46,14 @@ Alternatively, on Linux/macOS you can use `make`:
 make config=release luau luau-analyze
 ```
 
+To build a dynamic library, use the LUAU_BUILD_SHARED option:
+
+```
+mkdir cmake && cd cmake
+cmake .. -DLUAU_BUILD_SHARED=ON -DLUAU_STATIC_CRT=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build . --target Luau.Shared --config RelWithDebInfo
+```
+
 To integrate Luau into your CMake application projects as a library, at the minimum you'll need to depend on `Luau.Compiler` and `Luau.VM` projects. From there you need to create a new Luau state (using Lua 5.x API such as `lua_newstate`), compile source to bytecode and load it into the VM like this:
 
 ```cpp

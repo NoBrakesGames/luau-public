@@ -9,6 +9,7 @@ cmake_minimum_required(VERSION 3.0)
 option(LUAU_BUILD_CLI "Build CLI" ON)
 option(LUAU_BUILD_TESTS "Build tests" ON)
 option(LUAU_BUILD_WEB "Build Web module" OFF)
+option(LUAU_BUILD_SHARED "Build a shared library" OFF)
 option(LUAU_WERROR "Warnings as errors" OFF)
 option(LUAU_STATIC_CRT "Link with the static CRT (/MT)" OFF)
 option(LUAU_EXTERN_C "Use extern C for all APIs" OFF)
@@ -54,6 +55,12 @@ endif()
 
 if(LUAU_BUILD_WEB)
     add_executable(Luau.Web)
+endif()
+
+if(LUAU_BUILD_SHARED)
+	file(WRITE ${CMAKE_BINARY_DIR}/luau.shared.c "")
+	add_library(Luau.Shared SHARED luau.shared.c)
+	set_target_properties(Luau.Shared PROPERTIES OUTPUT_NAME luau-shared)
 endif()
 
 # Proxy target to make it possible to depend on private VM headers
@@ -135,7 +142,16 @@ target_compile_options(Luau.CodeGen PRIVATE ${LUAU_OPTIONS})
 target_compile_options(Luau.VM PRIVATE ${LUAU_OPTIONS})
 target_compile_options(isocline PRIVATE ${LUAU_OPTIONS} ${ISOCLINE_OPTIONS})
 
-if(LUAU_EXTERN_C)
+if(LUAU_BUILD_SHARED)
+	target_compile_definitions(Luau.VM PUBLIC LUA_USE_LONGJMP=1)
+	if(WIN32)
+		target_compile_definitions(Luau.VM PUBLIC "LUA_API=extern\"C\" __declspec(dllexport)")
+		target_compile_definitions(Luau.Compiler PUBLIC "LUACODE_API=extern\"C\" __declspec(dllexport)")
+	else()
+		target_compile_definitions(Luau.VM PUBLIC "LUA_API=extern\"C\" __attribute__ ((dllexport))")
+		target_compile_definitions(Luau.Compiler PUBLIC "LUACODE_API=extern\"C\" __attribute__ ((dllexport))")
+	endif()
+elseif(LUAU_EXTERN_C)
     # enable extern "C" for VM (lua.h, lualib.h) and Compiler (luacode.h) to make Luau friendlier to use from non-C++ languages
     # note that we enable LUA_USE_LONGJMP=1 as well; otherwise functions like luaL_error will throw C++ exceptions, which can't be done from extern "C" functions
     target_compile_definitions(Luau.VM PUBLIC LUA_USE_LONGJMP=1)
@@ -247,4 +263,9 @@ if(LUAU_BUILD_WEB)
 
     # the output is a single .js file with an embedded wasm blob
     target_link_options(Luau.Web PRIVATE -sSINGLE_FILE=1)
+endif()
+
+if(LUAU_BUILD_SHARED)
+	target_link_libraries(Luau.Shared PUBLIC "$<LINK_LIBRARY:WHOLE_ARCHIVE,Luau.VM,Luau.Compiler>")
+	set_target_properties(Luau.Shared PROPERTIES LINKER_LANGUAGE C)
 endif()
