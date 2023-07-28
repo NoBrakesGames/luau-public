@@ -144,7 +144,7 @@ target_compile_options(isocline PRIVATE ${LUAU_OPTIONS} ${ISOCLINE_OPTIONS})
 
 if(LUAU_BUILD_SHARED)
 	target_compile_definitions(Luau.VM PUBLIC LUA_USE_LONGJMP=1)
-	if(WIN32)
+	if(MSVC)
 		target_compile_definitions(Luau.VM PUBLIC "LUA_API=extern\"C\" __declspec(dllexport)")
 		target_compile_definitions(Luau.Compiler PUBLIC "LUACODE_API=extern\"C\" __declspec(dllexport)")
 	else()
